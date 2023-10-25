@@ -24,10 +24,17 @@ func main() {
 	mux.HandleFunc("/snippet/view", snippetView)
 	mux.HandleFunc("/snippet/create", snippetCreate)
 
+	//new http.Server struct so that http.server error uses our custom logger
+	srv := &http.Server{
+		Addr:     *addr,
+		ErrorLog: errorLog,
+		Handler:  mux,
+	}
+
 	infoLog.Print("Starting server on %s", *addr)
 	//creating a new server.
 	//Parameters: (TCP network address, your servemux)
-	err := http.ListenAndServe(*addr, mux)
+	err := srv.ListenAndServe()
 	//If there's an error, then it's logged.
 	errorLog.Fatal(err)
 }
