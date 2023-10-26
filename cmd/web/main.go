@@ -7,6 +7,12 @@ import (
 	"os"
 )
 
+// custom struct for application wide dependencies
+type application struct {
+	errorLog *log.Logger
+	infoLog  *log.Logger
+}
+
 func main() {
 
 	addr := flag.String("addr", ":4000", "HTTP network address")
@@ -14,15 +20,23 @@ func main() {
 	flag.Parse()
 	//Custom loggers | info & error for leveled logging
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+
+	app := &application{
+		errorLog: errorLog,
+		infoLog:  infoLog,
+	}
 
 	//init a new servemux
 	mux := http.NewServeMux()
+
+	fileServer := http.FileServer(http.Dir("./ui/static"))
+	mux.Handle("/static/", http.StripPrefix("/static", fileServer))
+
 	//router - maps url with corresponding handler
-	mux.HandleFunc("/", home)
-	mux.HandleFunc("/snippet/view", snippetView)
-	mux.HandleFunc("/snippet/create", snippetCreate)
+	mux.HandleFunc("/", app.home)
+	mux.HandleFunc("/snippet/view", app.snippetView)
+	mux.HandleFunc("/snippet/create", app.snippetCreate)
 
 	//new http.Server struct so that http.server error uses our custom logger
 	srv := &http.Server{
