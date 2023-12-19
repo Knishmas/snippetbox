@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -14,36 +15,34 @@ func (app *application) serverError(w http.ResponseWriter, err error) {
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
-// The clientError helper sends a specific status code and corresponding description
-// to the user. We'll use this later in the book to send responses like 400 "Bad
-// Request" when there's a problem with the request that the user sent.
+// Send a specific status code and corresponding description to the user.
 func (app *application) clientError(w http.ResponseWriter, status int) {
 	http.Error(w, http.StatusText(status), status)
 }
 
-// For consistency, we'll also implement a notFound helper. This is simply a
-// convenience wrapper around clientError which sends a 404 Not Found response to
-// the user.
 func (app *application) notFound(w http.ResponseWriter) {
 	app.clientError(w, http.StatusNotFound)
 }
 
 func (app *application) render(w http.ResponseWriter, status int, page string, data *templateData) {
 	//Retrive the template set from the cache based on the page name
-	//If there's an error then we return the error to the user
 	ts, ok := app.templateCache[page]
+	//return error, if any
 	if !ok {
 		err := fmt.Errorf("the template %s does not exist", page)
 		app.serverError(w, err)
 		return
 	}
-	// Write out the status code
-	w.WriteHeader(status)
 
-	// Execute the template set
-	// If there was an error, call our serverError helper and then return.
-	err := ts.ExecuteTemplate(w, "base", data)
+	buf := new(bytes.Buffer)
+
+	err := ts.ExecuteTemplate(buf, "base", data)
 	if err != nil {
 		app.serverError(w, err)
+		return
 	}
+
+	w.WriteHeader(status)
+
+	buf.WriteTo(w)
 }
