@@ -12,7 +12,6 @@ import (
 	"snippetbox.andresmacias.dev/internal/models"
 )
 
-// custom struct for application wide dependencies
 type application struct {
 	errorLog      *log.Logger
 	infoLog       *log.Logger
@@ -22,7 +21,6 @@ type application struct {
 
 func main() {
 	addr := flag.String("addr", ":4000", "HTTP network address")
-
 	dsn := flag.String("dsn", "web:temp-pass@/snippetbox?parseTime=true", "MySQL data source name")
 
 	flag.Parse()
@@ -30,13 +28,10 @@ func main() {
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
-	//To keep main clean, we're going to move the code for creating a connection pool in openDB
 	db, err := openDB(*dsn)
-
 	if err != nil {
 		errorLog.Fatal(err)
 	}
-	//connection pool closes before main exits
 	defer db.Close()
 
 	templateCache, err := newTemplateCache()
@@ -50,12 +45,13 @@ func main() {
 		snippets:      &models.SnippetModel{DB: db},
 		templateCache: templateCache,
 	}
+
 	srv := &http.Server{
 		Addr:     *addr,
 		ErrorLog: errorLog,
-		// Call the new app.routes() method to get the servemux containing our routes.
-		Handler: app.routes(),
+		Handler:  app.routes(),
 	}
+
 	infoLog.Printf("Starting server on %s", *addr)
 	err = srv.ListenAndServe()
 	errorLog.Fatal(err)
